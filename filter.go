@@ -94,7 +94,8 @@ func logFailure(message string, w http.ResponseWriter, r *http.Request, statusCo
 			log.Print(err)
 		}
 	}
-	log.Printf("Failure: %s %s", remoteHost, message)
+	requestBytes, _ := ioutil.ReadAll(r.Body)
+	log.Printf("Failure: %s %d %s %s %s", remoteHost, statusCode, message, r.URL.String(), requestBytes)
 	if w != nil {
 		errorBody, _ := json.Marshal(ErrorMessage{Message: message, Code: statusCode})
 		w.Header().Add("X-REJECTED-BY", "patroneos")
@@ -130,7 +131,7 @@ func logSuccess(message string, r *http.Request) {
 			log.Print(err)
 		}
 	}
-	log.Printf("Success: %s %s", remoteHost, message)
+	log.Printf("Success: %s %s %s", remoteHost, message, r.URL.String())
 }
 
 // validateJSON checks that the POST body contains a valid JSON object.
@@ -310,6 +311,7 @@ func forwardCallToNodeos(w http.ResponseWriter, r *http.Request) {
 	url := nodeosHost + r.URL.String()
 	method := r.Method
 	body, _ := ioutil.ReadAll(r.Body)
+	r.Body = ioutil.NopCloser(bytes.NewBuffer(body))
 
 	request, err := http.NewRequest(method, url, bytes.NewBuffer(body))
 
